@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const app = express();
+const stripe = require("stripe")(process.env.Stripe_Payment_Secret_Key);
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
 
@@ -29,9 +30,8 @@ async function run() {
     // await client.connect();
 
     const biodatasCollection = client.db("matrimonyDB").collection("biodatas");
-    const premiumCollection = client
-      .db("matrimonyDB")
-      .collection("premiumBiodata");
+    const premiumCollection = client.db("matrimonyDB").collection("premiumBiodata");
+    const favouritesCollection = client.db("matrimonyDB").collection("favourites");
 
     // User premium or not
     app.get("/api/check-user-premium", async(req, res) => {
@@ -82,6 +82,18 @@ async function run() {
       const result = await biodatasCollection.findOne(query);
       res.send(result);
     });
+
+    // payment intent
+    app.post('/api/create-payment-intent',async(req,res)=>{
+      const {price} = req.body;
+      const amount = parseInt(price*100);
+      const paymentIntent= await stripe.paymentIntents.create({
+        amount:amount,
+        currency:'usd',
+        payment_method_types:['card']
+      });
+      res.send({clientSecret:paymentIntent.client_secret})
+    })
     // create biodata
     app.post("/api/edit-create/biodata", async (req, res) => {
       const biodata = req.body;
@@ -134,6 +146,13 @@ async function run() {
       const result = await biodatasCollection.updateOne(filter, updateBiodata);
       res.send(result);
     });
+
+    // add data to favourite collection
+    app.post('/api/addToFavourite-collection',async(req,res)=>{
+      const biodata = req.body;
+      const result = await favouritesCollection.insertOne(biodata);
+      res.send(result);
+    })
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log(
