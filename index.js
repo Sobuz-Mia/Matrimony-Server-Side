@@ -34,6 +34,20 @@ async function run() {
     const favouritesCollection = client.db("matrimonyDB").collection("favourites");
     const paymentCollection = client.db("matrimonyDB").collection("payments");
 
+    // get favorites data 
+    app.get('/api/favorite-data',async(req,res)=>{
+      const email = req.query.email;
+      const query = {userEmail:email}
+      const result = await favouritesCollection.find(query).toArray();
+      res.send(result)
+    })
+    // delete favorite item
+    app.delete('/api/delete-favorite/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query ={_id: new ObjectId(id)}
+      const result = await favouritesCollection.deleteOne(query);
+      res.send(result)
+    })
     // User premium or not
     app.get("/api/check-user-premium", async(req, res) => {
       const email = req.query.email;
@@ -97,7 +111,6 @@ async function run() {
     })
     app.post('/api/payment',async(req,res)=>{
       const payment = req.body;
-      console.log(payment)
       const paymentResult = await paymentCollection.insertOne(payment);
       res.send(paymentResult)
     })
