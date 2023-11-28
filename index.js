@@ -32,6 +32,7 @@ async function run() {
     const biodatasCollection = client.db("matrimonyDB").collection("biodatas");
     const premiumCollection = client.db("matrimonyDB").collection("premiumBiodata");
     const favouritesCollection = client.db("matrimonyDB").collection("favourites");
+    const paymentCollection = client.db("matrimonyDB").collection("payments");
 
     // User premium or not
     app.get("/api/check-user-premium", async(req, res) => {
@@ -93,6 +94,12 @@ async function run() {
         payment_method_types:['card']
       });
       res.send({clientSecret:paymentIntent.client_secret})
+    })
+    app.post('/api/payment',async(req,res)=>{
+      const payment = req.body;
+      console.log(payment)
+      const paymentResult = await paymentCollection.insertOne(payment);
+      res.send(paymentResult)
     })
     // create biodata
     app.post("/api/edit-create/biodata", async (req, res) => {
