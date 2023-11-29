@@ -30,59 +30,75 @@ async function run() {
     // await client.connect();
 
     const biodatasCollection = client.db("matrimonyDB").collection("biodatas");
-    const premiumCollection = client.db("matrimonyDB").collection("premiumBiodata");
-    const favouritesCollection = client.db("matrimonyDB").collection("favourites");
+    const premiumCollection = client
+      .db("matrimonyDB")
+      .collection("premiumBiodata");
+    const favouritesCollection = client
+      .db("matrimonyDB")
+      .collection("favourites");
     const paymentCollection = client.db("matrimonyDB").collection("payments");
-
-
+    const usersCollection = client.db("matrimonyDB").collection("users");
 
     // count down all data
 
-    app.get('/api/count-data',async(req,res)=>{
+    app.get("/api/count-data", async (req, res) => {
       const totalBiodata = await biodatasCollection.countDocuments();
-      const maleData = await biodatasCollection.countDocuments({biodataType: 'Male' || 'male'});
-      const femaleData = await biodatasCollection.countDocuments({biodataType: 'Female' || 'female'});
+      const maleData = await biodatasCollection.countDocuments({
+        biodataType: "Male" || "male",
+      });
+      const femaleData = await biodatasCollection.countDocuments({
+        biodataType: "Female" || "female",
+      });
       const premiumData = await premiumCollection.countDocuments();
-      const aggregationResult = await paymentCollection.aggregate([
-        {
-          $group: {
-            _id: null,
-            totalPrice: { $sum: '$price' },
+      const aggregationResult = await paymentCollection
+        .aggregate([
+          {
+            $group: {
+              _id: null,
+              totalPrice: { $sum: "$price" },
+            },
           },
-        },
-      ]).toArray();
-      const price = aggregationResult.length > 0 ? aggregationResult[0].totalPrice : 0;
+        ])
+        .toArray();
+      const price =
+        aggregationResult.length > 0 ? aggregationResult[0].totalPrice : 0;
       const totalPrice = price / 100;
-      console.log(totalPrice)
-      res.send({totalBio:totalBiodata,maleData:maleData,femaleData:femaleData,premiumData:premiumData,totalRevenue:totalPrice})
-    })
+      console.log(totalPrice);
+      res.send({
+        totalBio: totalBiodata,
+        maleData: maleData,
+        femaleData: femaleData,
+        premiumData: premiumData,
+        totalRevenue: totalPrice,
+      });
+    });
 
-    // get favorites data 
-    app.get('/api/favorite-data',async(req,res)=>{
+    // get favorites data
+    app.get("/api/favorite-data", async (req, res) => {
       const email = req.query.email;
-      const query = {userEmail:email}
+      const query = { userEmail: email };
       const result = await favouritesCollection.find(query).toArray();
-      res.send(result)
-    })
+      res.send(result);
+    });
     // delete favorite item
-    app.delete('/api/delete-favorite/:id',async(req,res)=>{
+    app.delete("/api/delete-favorite/:id", async (req, res) => {
       const id = req.params.id;
-      const query ={_id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await favouritesCollection.deleteOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
     // User premium or not
-    app.get("/api/check-user-premium", async(req, res) => {
+    app.get("/api/check-user-premium", async (req, res) => {
       const email = req.query.email;
       const id = req.query.id;
-      const filter ={biodataId:parseInt(id)}
+      const filter = { biodataId: parseInt(id) };
       const query = { email: email };
       const user = await premiumCollection.findOne(query);
-      if(!user || user.premiumRequest !== "premium"){
-        return res.send({message:'you are not premium member'})
+      if (!user || user.premiumRequest !== "premium") {
+        return res.send({ message: "you are not premium member" });
       }
-      const result= await premiumCollection.findOne(filter)
-      res.send(result)
+      const result = await premiumCollection.findOne(filter);
+      res.send(result);
     });
 
     // premium bio data operation start
@@ -93,12 +109,23 @@ async function run() {
       res.send(result);
     });
     // get contact requets data
-    app.get('/api/contact-request',async(req,res)=>{
+    app.get("/api/contact-request", async (req, res) => {
       const email = req.query.email;
-      const query = {email:email}
-      const result = await paymentCollection.find(query).toArray()
-      res.send(result)
-    })
+      const query = { email: email };
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    });
+    // user save to database
+    app.post("/api/users", async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+      const isExisting = await usersCollection.findOne(query);
+      if (isExisting) {
+        return res.send({ message: "user already exist" });
+      }
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    });
     // get all biodata
     app.get("/api/biodatas", async (req, res) => {
       const result = await biodatasCollection.find().toArray();
@@ -127,22 +154,22 @@ async function run() {
     });
 
     // payment intent
-    app.post('/api/create-payment-intent',async(req,res)=>{
-      const {price} = req.body;
+    app.post("/api/create-payment-intent", async (req, res) => {
+      const { price } = req.body;
       const amount = parseInt(price * 100);
-      const paymentIntent= await stripe.paymentIntents.create({
-        amount:amount,
-        currency:'usd',
-        payment_method_types:['card']
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: "usd",
+        payment_method_types: ["card"],
       });
-      res.send({clientSecret:paymentIntent.client_secret})
-    })
+      res.send({ clientSecret: paymentIntent.client_secret });
+    });
     // payment data save api
-    app.post('/api/payment',async(req,res)=>{
+    app.post("/api/payment", async (req, res) => {
       const payment = req.body;
       const paymentResult = await paymentCollection.insertOne(payment);
-      res.send(paymentResult)
-    })
+      res.send(paymentResult);
+    });
     // create biodata
     app.post("/api/edit-create/biodata", async (req, res) => {
       const biodata = req.body;
@@ -164,8 +191,8 @@ async function run() {
         presentDivision: biodata.presentDivision,
         race: biodata.race,
         weight: biodata.weight,
-        contactEmail:biodata.contactEmail,
-        phoneNumber:biodata.phoneNumber,
+        contactEmail: biodata.contactEmail,
+        phoneNumber: biodata.phoneNumber,
       };
       const result = await biodatasCollection.insertOne(newBiodata);
       res.send(result);
@@ -191,8 +218,8 @@ async function run() {
           presentDivision: biodata.presentDivision,
           race: biodata.race,
           weight: biodata.weight,
-          contactEmail:biodata.contactEmail,
-          phoneNumber:biodata.phoneNumber,
+          contactEmail: biodata.contactEmail,
+          phoneNumber: biodata.phoneNumber,
         },
       };
       const result = await biodatasCollection.updateOne(filter, updateBiodata);
@@ -200,18 +227,18 @@ async function run() {
     });
 
     // add data to favourite collection
-    app.post('/api/addToFavourite-collection',async(req,res)=>{
+    app.post("/api/addToFavourite-collection", async (req, res) => {
       const biodata = req.body;
       const result = await favouritesCollection.insertOne(biodata);
       res.send(result);
-    })
+    });
     // delete contact request
-    app.delete('/api/contact-request/delete/:id',async(req,res)=>{
+    app.delete("/api/contact-request/delete/:id", async (req, res) => {
       const id = req.params.id;
-      const query = {_id:new ObjectId(id)}
-      const result = await paymentCollection.deleteOne(query)
-      res.send(result)
-    })
+      const query = { _id: new ObjectId(id) };
+      const result = await paymentCollection.deleteOne(query);
+      res.send(result);
+    });
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
     console.log(
