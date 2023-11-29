@@ -30,12 +30,8 @@ async function run() {
     // await client.connect();
 
     const biodatasCollection = client.db("matrimonyDB").collection("biodatas");
-    const premiumCollection = client
-      .db("matrimonyDB")
-      .collection("premiumBiodata");
-    const favouritesCollection = client
-      .db("matrimonyDB")
-      .collection("favourites");
+    const premiumCollection = client.db("matrimonyDB").collection("premiumBiodata");
+    const favouritesCollection = client.db("matrimonyDB").collection("favourites");
     const paymentCollection = client.db("matrimonyDB").collection("payments");
     const usersCollection = client.db("matrimonyDB").collection("users");
 
@@ -60,10 +56,7 @@ async function run() {
           },
         ])
         .toArray();
-      const price =
-        aggregationResult.length > 0 ? aggregationResult[0].totalPrice : 0;
-      const totalPrice = price / 100;
-      console.log(totalPrice);
+      const totalPrice =aggregationResult.length > 0 ? aggregationResult[0].totalPrice : 0;
       res.send({
         totalBio: totalBiodata,
         maleData: maleData,
@@ -115,9 +108,15 @@ async function run() {
       const result = await paymentCollection.find(query).toArray();
       res.send(result);
     });
+    // get all user data
+    app.get('/api/users',async(req,res)=>{
+      const result = await usersCollection.find().toArray()
+      res.send(result)
+    })
     // user save to database
     app.post("/api/users", async (req, res) => {
       const user = req.body;
+      console.log(user)
       const query = { email: user.email };
       const isExisting = await usersCollection.findOne(query);
       if (isExisting) {
@@ -126,6 +125,18 @@ async function run() {
       const result = await usersCollection.insertOne(user);
       res.send(result);
     });
+    // user update to admin
+    app.patch('/api/user/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const updateDoc = {
+        $set: {
+          role: "Admin",
+        },
+      };
+      const result = await usersCollection.updateOne(query, updateDoc);
+      res.send(result);
+    })
     // get all biodata
     app.get("/api/biodatas", async (req, res) => {
       const result = await biodatasCollection.find().toArray();
@@ -157,6 +168,7 @@ async function run() {
     app.post("/api/create-payment-intent", async (req, res) => {
       const { price } = req.body;
       const amount = parseInt(price * 100);
+      console.log(amount,price)
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
         currency: "usd",
