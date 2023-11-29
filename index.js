@@ -34,6 +34,29 @@ async function run() {
     const favouritesCollection = client.db("matrimonyDB").collection("favourites");
     const paymentCollection = client.db("matrimonyDB").collection("payments");
 
+
+
+    // count down all data
+
+    app.get('/api/count-data',async(req,res)=>{
+      const totalBiodata = await biodatasCollection.countDocuments();
+      const maleData = await biodatasCollection.countDocuments({biodataType: 'Male' || 'male'});
+      const femaleData = await biodatasCollection.countDocuments({biodataType: 'Female' || 'female'});
+      const premiumData = await premiumCollection.countDocuments();
+      const aggregationResult = await paymentCollection.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalPrice: { $sum: '$price' },
+          },
+        },
+      ]).toArray();
+      const price = aggregationResult.length > 0 ? aggregationResult[0].totalPrice : 0;
+      const totalPrice = price / 100;
+      console.log(totalPrice)
+      res.send({totalBio:totalBiodata,maleData:maleData,femaleData:femaleData,premiumData:premiumData,totalRevenue:totalPrice})
+    })
+
     // get favorites data 
     app.get('/api/favorite-data',async(req,res)=>{
       const email = req.query.email;
@@ -60,7 +83,6 @@ async function run() {
       }
       const result= await premiumCollection.findOne(filter)
       res.send(result)
-      console.log('Data',result)
     });
 
     // premium bio data operation start
@@ -70,7 +92,13 @@ async function run() {
       const result = await premiumCollection.insertOne(requestInfo);
       res.send(result);
     });
-
+    // get contact requets data
+    app.get('/api/contact-request',async(req,res)=>{
+      const email = req.query.email;
+      const query = {email:email}
+      const result = await paymentCollection.find(query).toArray()
+      res.send(result)
+    })
     // get all biodata
     app.get("/api/biodatas", async (req, res) => {
       const result = await biodatasCollection.find().toArray();
@@ -93,7 +121,7 @@ async function run() {
     // get user based data
     app.get("/api/singleBiodata", async (req, res) => {
       const email = req.query.email;
-      const query = { email: email };
+      const query = { contactEmail: email };
       const result = await biodatasCollection.findOne(query);
       res.send(result);
     });
@@ -101,7 +129,7 @@ async function run() {
     // payment intent
     app.post('/api/create-payment-intent',async(req,res)=>{
       const {price} = req.body;
-      const amount = parseInt(price*100);
+      const amount = parseInt(price * 100);
       const paymentIntent= await stripe.paymentIntents.create({
         amount:amount,
         currency:'usd',
@@ -109,6 +137,7 @@ async function run() {
       });
       res.send({clientSecret:paymentIntent.client_secret})
     })
+    // payment data save api
     app.post('/api/payment',async(req,res)=>{
       const payment = req.body;
       const paymentResult = await paymentCollection.insertOne(payment);
@@ -127,7 +156,6 @@ async function run() {
         height: biodata.height,
         motherName: biodata.motherName,
         name: biodata.name,
-        email: biodata.email,
         occupation: biodata.occupation,
         partnerHeight: biodata.partnerHeight,
         partnerWeight: biodata.partnerWeight,
@@ -136,6 +164,8 @@ async function run() {
         presentDivision: biodata.presentDivision,
         race: biodata.race,
         weight: biodata.weight,
+        contactEmail:biodata.contactEmail,
+        phoneNumber:biodata.phoneNumber,
       };
       const result = await biodatasCollection.insertOne(newBiodata);
       res.send(result);
@@ -161,6 +191,8 @@ async function run() {
           presentDivision: biodata.presentDivision,
           race: biodata.race,
           weight: biodata.weight,
+          contactEmail:biodata.contactEmail,
+          phoneNumber:biodata.phoneNumber,
         },
       };
       const result = await biodatasCollection.updateOne(filter, updateBiodata);
@@ -172,6 +204,13 @@ async function run() {
       const biodata = req.body;
       const result = await favouritesCollection.insertOne(biodata);
       res.send(result);
+    })
+    // delete contact request
+    app.delete('/api/contact-request/delete/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id:new ObjectId(id)}
+      const result = await paymentCollection.deleteOne(query)
+      res.send(result)
     })
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
