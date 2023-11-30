@@ -34,18 +34,20 @@ async function run() {
     const favouritesCollection = client.db("matrimonyDB").collection("favourites");
     const paymentCollection = client.db("matrimonyDB").collection("payments");
     const usersCollection = client.db("matrimonyDB").collection("users");
+    const successStoryCollection = client.db("matrimonyDB").collection("successStory");
 
     // count down all data
 
     app.get("/api/count-data", async (req, res) => {
       const totalBiodata = await biodatasCollection.countDocuments();
       const maleData = await biodatasCollection.countDocuments({
-        biodataType: "Male" || "male",
+        biodataType: "male" || "Male",
       });
       const femaleData = await biodatasCollection.countDocuments({
-        biodataType: "Female" || "female",
+        biodataType: "female" || "Female",
       });
       const premiumData = await premiumCollection.countDocuments();
+      const marriedComplete = await successStoryCollection.countDocuments();
       const aggregationResult = await paymentCollection
         .aggregate([
           {
@@ -63,9 +65,14 @@ async function run() {
         femaleData: femaleData,
         premiumData: premiumData,
         totalRevenue: totalPrice,
+        completeMarried:marriedComplete
       });
     });
-
+    // get successStory
+    app.get('/api/success-story',async(req,res)=>{
+      const result = await successStoryCollection.find().sort({ marriageDate: 1 }).toArray();
+      res.send(result)
+    })
     // get favorites data
     app.get("/api/favorite-data", async (req, res) => {
       const email = req.query.email;
@@ -194,7 +201,7 @@ async function run() {
     })
     // get all biodata
     app.get("/api/biodatas", async (req, res) => {
-      const result = await biodatasCollection.find().toArray();
+      const result = await biodatasCollection.find().sort({age:1}).toArray();
       res.send(result);
     });
     // get similar data using gender
