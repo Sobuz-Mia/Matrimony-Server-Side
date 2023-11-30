@@ -94,13 +94,35 @@ async function run() {
       res.send(result);
     });
 
+
     // premium bio data operation start
 
+    app.get('/api/premium',async(req,res)=>{
+      const result = await premiumCollection.find().toArray();
+      res.send(result)
+    })
+
+    app.patch('/api/user/premium/data/:id',async(req,res)=>{
+      const id = req.params.id;
+      const filter ={biodataId: parseInt(id)}
+      const updateDoc ={
+        $set:{
+          premiumRequest:'premium'
+        }
+      }
+      const result = await premiumCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
     app.post("/api/make-premium/request", async (req, res) => {
       const requestInfo = req.body;
       const result = await premiumCollection.insertOne(requestInfo);
       res.send(result);
     });
+    // get all contact request data for admin
+    app.get('/api/all-contact/requested-data',async(req,res)=>{
+      const result = await paymentCollection.find().toArray();
+      res.send(result)
+    })
     // get contact requets data
     app.get("/api/contact-request", async (req, res) => {
       const email = req.query.email;
@@ -108,10 +130,31 @@ async function run() {
       const result = await paymentCollection.find(query).toArray();
       res.send(result);
     });
+    app.patch('/api/update-status/:id',async(req,res)=>{
+      const id = req.params.id;
+      const filter = {biodataId: parseInt(id)}
+      const updateDoc ={
+        $set:{
+          status:'approved'
+        }
+      }
+      const result = await paymentCollection.updateOne(filter,updateDoc)
+      res.send(result)
+    })
     // get all user data
     app.get('/api/users',async(req,res)=>{
       const result = await usersCollection.find().toArray()
       res.send(result)
+    })
+    app.get('/api/users/admin',async(req,res)=>{
+      const email = req.query.email;
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === "Admin";
+      }
+      res.send({ admin });
     })
     // user save to database
     app.post("/api/users", async (req, res) => {
@@ -136,6 +179,18 @@ async function run() {
       };
       const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
+    })
+    // create premium user
+    app.patch('/api/user/premium',async(req,res)=>{
+      const email = req.query.email;
+      const query = {email:email}
+      const updateDoc = {
+        $set:{
+          premiumRequest: 'premium'
+        }
+      }
+      const result = await premiumCollection.updateOne(query,updateDoc)
+      res.send(result)
     })
     // get all biodata
     app.get("/api/biodatas", async (req, res) => {
