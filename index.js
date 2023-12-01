@@ -137,13 +137,15 @@ async function run() {
     app.get("/api/check-user-premium", async (req, res) => {
       const email = req.query.email;
       const id = req.query.id;
-      const filter = { biodataId: parseInt(id) };
+    
+      const filter = { biodataId:parseInt(id)};
+      console.log(filter)
       const query = { email: email };
-      const user = await premiumCollection.findOne(query);
-      if (!user || user.premiumRequest !== "premium") {
+      const user = await usersCollection.findOne(query);
+      if (!user || user.userStatus !== "premium") {
         return res.send({ message: "you are not premium member" });
       }
-      const result = await premiumCollection.findOne(filter);
+      const result = await biodatasCollection.findOne(filter);
       res.send(result);
     });
 
@@ -162,6 +164,7 @@ async function run() {
           premiumRequest: "premium",
         },
       };
+      await biodatasCollection.updateOne(filter,updateDoc)
       const result = await premiumCollection.updateOne(filter, updateDoc);
       res.send(result);
     });
@@ -176,7 +179,7 @@ async function run() {
       res.send(result);
     });
     // get contact requets data
-    app.get("/api/contact-request", async (req, res) => {
+    app.get("/api/contact-request",verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { email: email };
       const result = await paymentCollection.find(query).toArray();
@@ -237,15 +240,15 @@ async function run() {
       res.send(result);
     });
     // create premium user
-    app.patch("/api/user/premium", async (req, res) => {
-      const email = req.query.email;
-      const query = { email: email };
+    app.patch("/api/user/premium/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)};
       const updateDoc = {
         $set: {
-          premiumRequest: "premium",
+          userStatus: "premium",
         },
       };
-      const result = await premiumCollection.updateOne(query, updateDoc);
+      const result = await usersCollection.updateOne(query, updateDoc);
       res.send(result);
     });
     // get all biodata
@@ -263,6 +266,7 @@ async function run() {
     // get single biodata using id
     app.get("/api/biodata/:id", async (req, res) => {
       const id = req.params.id;
+
       const query = { _id: new ObjectId(id) };
       const result = await biodatasCollection.findOne(query);
       res.send(result);
@@ -274,7 +278,13 @@ async function run() {
       const result = await biodatasCollection.findOne(query);
       res.send(result);
     });
-
+    // save success story 
+    app.post('/api/marriage-story',async(req,res)=>{
+      const successInfo = req.body;
+      const result = await successStoryCollection.insertOne(successInfo)
+      console.log(result)
+      res.send(result);
+    })
     // payment intent
     app.post("/api/create-payment-intent", async (req, res) => {
       const { price } = req.body;
