@@ -197,8 +197,13 @@ async function run() {
       res.send(result);
     });
     // get all user data
-    app.get("/api/users",verifyToken,verifyAdmin, async (req, res) => {
-      const result = await usersCollection.find().toArray();
+    app.get("/api/users",verifyToken,verifyAdmin,async (req, res) => {
+      let query ={};
+      const searchValue = req.query.search ? req.query.search.toLowerCase() : '';
+      if (searchValue) {
+        query.userName = { $regex: new RegExp(searchValue, "i") }; 
+      }
+      const result = await usersCollection.find(query).toArray();
       res.send(result);
     });
 
