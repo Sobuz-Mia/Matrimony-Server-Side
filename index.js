@@ -11,8 +11,7 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// password:JsBmS8fCTlmoPtA1
-// userName:Matrimony
+
 
 const uri = `mongodb+srv://${process.env.USER_NAME}:${process.env.USER_PASS}@cluster0.sbw5eqf.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -80,7 +79,7 @@ async function run() {
 
     // count down all data
 
-    app.get("/api/count-data", async (req, res) => {
+    app.get("/api/count-data",verifyToken,verifyAdmin, async (req, res) => {
       const totalBiodata = await biodatasCollection.countDocuments();
       const maleData = await biodatasCollection.countDocuments({
         biodataType: "male" || "Male",
@@ -120,7 +119,7 @@ async function run() {
       res.send(result);
     });
     // get favorites data
-    app.get("/api/favorite-data", async (req, res) => {
+    app.get("/api/favorite-data",verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { userEmail: email };
       const result = await favouritesCollection.find(query).toArray();
@@ -139,7 +138,6 @@ async function run() {
       const id = req.query.id;
     
       const filter = { biodataId:parseInt(id)};
-      console.log(filter)
       const query = { email: email };
       const user = await usersCollection.findOne(query);
       if (!user || user.userStatus !== "premium") {
@@ -206,7 +204,7 @@ async function run() {
       const result = await usersCollection.find(query).toArray();
       res.send(result);
     });
-
+    // get admin api
     app.get("/api/users/admin",verifyToken, async (req, res) => {
       const email = req.query.email;
       if (email !== req.decoded.email) {
@@ -223,7 +221,6 @@ async function run() {
     // user save to database
     app.post("/api/users", async (req, res) => {
       const user = req.body;
-      console.log(user);
       const query = { email: user.email };
       const isExisting = await usersCollection.findOne(query);
       if (isExisting) {
@@ -258,7 +255,13 @@ async function run() {
     });
     // get all biodata
     app.get("/api/biodatas", async (req, res) => {
-      const result = await biodatasCollection.find().sort({ age: 1 }).toArray();
+      const query = {}
+      const result = await biodatasCollection.find(query).sort({ age: 1 }).toArray();
+      res.send(result);
+    });
+    app.get("/api/banner/biodatas", async (req, res) => {
+      const query = {premiumRequest:req.query.dataType}
+      const result = await biodatasCollection.find(query).toArray();
       res.send(result);
     });
     // get similar data using gender
@@ -379,9 +382,9 @@ async function run() {
     });
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
